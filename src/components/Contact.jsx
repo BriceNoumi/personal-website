@@ -1,20 +1,39 @@
-import { useState } from 'react';
-import { Send, Mail, Phone, MapPin, Github, Linkedin } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Send, Mail, Phone, MapPin, Github, Linkedin, CheckCircle, AlertCircle, Loader } from 'lucide-react';
+import emailjs from '@emailjs/browser';
+
+const EMAILJS_SERVICE_ID = import.meta.env.VITE_EMAILJS_SERVICE_ID;
+const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
+const EMAILJS_PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
 
 export default function Contact() {
+  const formRef = useRef(null);
   const [form, setForm] = useState({ name: '', email: '', subject: '', message: '' });
   const [status, setStatus] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) =>
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const { name, email, subject, message } = form;
-    const mailto = `mailto:bricenikenoumimipo@gmail.com?subject=${encodeURIComponent(subject || `Contact from ${name}`)}&body=${encodeURIComponent(`Name: ${name}\nEmail: ${email}\n\n${message}`)}`;
-    window.location.href = mailto;
-    setStatus('sent');
-    setForm({ name: '', email: '', subject: '', message: '' });
+    setLoading(true);
+    setStatus(null);
+
+    try {
+      await emailjs.sendForm(
+        EMAILJS_SERVICE_ID,
+        EMAILJS_TEMPLATE_ID,
+        formRef.current,
+        { publicKey: EMAILJS_PUBLIC_KEY }
+      );
+      setStatus('success');
+      setForm({ name: '', email: '', subject: '', message: '' });
+    } catch {
+      setStatus('error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -62,7 +81,7 @@ export default function Contact() {
               <h3 className="text-white font-semibold mb-4">Follow me</h3>
               <div className="flex flex-col gap-3">
                 <a
-                  href="https://github.com/brice-noumi"
+                  href="https://github.com/BriceNoumi"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-3 text-gray-400 hover:text-white transition-colors duration-200 text-sm"
@@ -85,7 +104,7 @@ export default function Contact() {
 
           <div className="md:col-span-3 bg-gray-900/60 border border-gray-800/60 rounded-2xl p-6">
             <h3 className="text-white font-semibold mb-6">Send a message</h3>
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <form ref={formRef} onSubmit={handleSubmit} className="flex flex-col gap-4">
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs text-gray-500 mb-1.5 block">Name</label>
@@ -136,18 +155,29 @@ export default function Contact() {
                 />
               </div>
 
-              {status === 'sent' && (
-                <p className="text-green-400 text-sm">
-                  Message sent! Your email client should have opened.
-                </p>
+              {status === 'success' && (
+                <div className="flex items-center gap-2 text-green-400 text-sm bg-green-500/10 border border-green-500/20 rounded-lg px-4 py-3">
+                  <CheckCircle size={16} />
+                  Message sent! I&apos;ll get back to you as soon as possible.
+                </div>
+              )}
+              {status === 'error' && (
+                <div className="flex items-center gap-2 text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3">
+                  <AlertCircle size={16} />
+                  Something went wrong. Please try again or email me directly.
+                </div>
               )}
 
               <button
                 type="submit"
-                className="flex items-center justify-center gap-2 w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-lg transition-all duration-200 hover:scale-[1.02] shadow-lg shadow-indigo-500/20"
+                disabled={loading}
+                className="flex items-center justify-center gap-2 w-full py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all duration-200 hover:scale-[1.02] shadow-lg shadow-indigo-500/20"
               >
-                <Send size={16} />
-                Send Message
+                {loading ? (
+                  <><Loader size={16} className="animate-spin" /> Sending...</>
+                ) : (
+                  <><Send size={16} /> Send Message</>
+                )}
               </button>
             </form>
           </div>
